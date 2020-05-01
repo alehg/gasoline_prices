@@ -1,2 +1,2 @@
-# gasoline_prices
-I measure the level of price dispersion among different gasoline stations in Mexico
+# Gas Prices
+I describe the evolution and distribution of prices in La Laguna region in Mexico, after deregulation.
