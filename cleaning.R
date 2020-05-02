@@ -12,7 +12,7 @@ dir <- '/code/Functions/'
 funs<-list.files(paste0(getwd(),dir))
 lapply(str_c(getwd(),dir,funs),source)
 
-prices_raw <- readRDS('Data/laguna_prices.rds')
+prices_raw <- readRDS('data/laguna_prices.rds')
 
 # We are only intrested in prices after deregulation 
 prices0 <- prices_raw %>% 
@@ -94,7 +94,7 @@ prices2 <- map_dfr(unique(prices1$product),densidad,prices1,distancias,entry_dat
  #   filter(abs(dev) > 0.6)
  # there are a few outliers (around 2500 out of 240000, 1%) but none of them have a deviation higher than one peso
  
-final_prices0 <- prices2 %>% 
+clean_prices <- prices2 %>% 
    filter(!is.na(price_end)) %>% 
    left_join(gasocl, by = 'code') %>% 
    select(-c('latitude','longitude')) %>% 
@@ -105,5 +105,5 @@ final_prices0 <- prices2 %>%
 
  
  
-save(final_prices0,prices_raw,distancias,gasocl,entry_dates,file = 'data/clean_prices.RData') 
+save(clean_prices,prices_raw,distancias,gasocl,entry_dates,file = 'data/clean_prices.RData') 
 

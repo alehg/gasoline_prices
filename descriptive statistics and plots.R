@@ -1,9 +1,6 @@
 rm(list=ls())
 # Here I will make some quantile and standard deviation plots 
 
-# setwd("C:/Users/kaso02/Desktop/Alex/Tesis/Code & Data")
-setwd("C:/Users/alehe/Dropbox/ITAM/Tesis/Code & Data")
-
 x <- c('tidyverse','openxlsx','geosphere',
        'magrittr','scales','readxl','extrafont',
        'fastDummies','treemapify','lubridate',
@@ -32,7 +29,7 @@ theme_tesis <- theme_minimal() +
 
 theme_set(theme_tesis)
 
-pKASO1 <- c("#023876","#045DC3","#318DF6") #azules de oscuro a claro
+azules <- c("#023876","#045DC3","#318DF6") #azules de oscuro a claro
 naranja <- c("#C56403")
 verdes <-c('#044A26','#006D34')
 gris <- c('#858585')
@@ -44,8 +41,10 @@ aux_reg <- function(producto,price_df){
   df <- df %>% mutate(uhat = u_hat,disp = log(uhat^2))
   return(list(df,modelito))
 }
-auxreg_list <- map(unique(final_prices0$product),aux_reg,final_prices0)
+auxreg_list <- map(unique(clean_prices$product),aux_reg,clean_prices)
 final_prices <- map_dfr(1:3,function(i,lista) pluck(lista,i,1),auxreg_list)
+save(final_prices,file='data/final_prices.RData')
+save(auxreg_list,file='data/auxreg_results.RData')
 
 #Standard Deviation Plots 
 sd_plots <- map(unique(final_prices$product),sdplot,final_prices)
@@ -84,9 +83,9 @@ getmode <- function(v) {
    uniqv <- unique(v)
    uniqv[which.max(tabulate(match(v, uniqv)))]
 }
-final_prices %>% 
-  group_by(code) %>% summarise(muni = getmode(muni_name)) %>% 
-  group_by(muni) %>% summarise(stations = n()) %>% ungroup() 
+# final_prices %>% 
+#   group_by(code) %>% summarise(muni = getmode(muni_name)) %>% 
+#   group_by(muni) %>% summarise(stations = n()) %>% ungroup() 
 
 # 97 in Torreon (68.3%)
 # 45 in Gomez Palacio (31.7%)
@@ -98,7 +97,7 @@ road_type <- tabla %>% filter(var %>% str_detect('Road')) %>%
   ggplot(aes(area = mean,fill = var)) + 
   geom_treemap(stat = 'identity') +
   geom_treemap_text(aes(label = var),place = 'centre')+
-  scale_fill_manual(values = c(pKASO1[2:3],verdes[2],gris,naranja))+
+  scale_fill_manual(values = c(azules[2:3],verdes[2],gris,naranja))+
   theme(legend.position = 'none') +
   labs(title = 'Distribution of stations by Road Type')
   
@@ -231,7 +230,9 @@ tabla_precios <- final_prices %>%
             sd_price = sd(value)) %>% 
   ungroup()
 
-save.image('current.RData')
+save(sd_plots,quant_plots,term_plots,tabla,road_type,brand,
+     density_hist,density_plots,price_plots,
+     correlation_plots,dispersion_plots, tabla_precios,file='data/plots.RData')
 
 
 
