@@ -8,7 +8,7 @@ x <- c('tidyverse','openxlsx','magrittr','lubridate',
        'geosphere')
 lapply(x, library, character.only = TRUE)
 
-dir <- '/code/Functions/'
+dir <- '/Functions/'
 funs<-list.files(paste0(getwd(),dir))
 lapply(str_c(getwd(),dir,funs),source)
 

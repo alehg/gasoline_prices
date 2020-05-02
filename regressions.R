@@ -2,13 +2,8 @@
 
 rm(list=ls())
 
-setwd("C:/Users/alehe/Dropbox/ITAM/Tesis/Code & Data")
-# setwd('C:/Users/ahernandgon/Desktop/Code & Data')
-# setwd("C:/Users/kaso02/Desktop/Alex/Tesis/Code & Data")
-
-# load('final_prices.RData')
-# file is too heavy for dropbox
-load("C:/Users/alehe/Documents/current.RData")
+# load clean prices with auxiliar regression residuals
+load("data/final_prices.RData")
 
 #install.packages('pacman')
 x <- c('tidyverse','openxlsx','geosphere','magrittr','plm',
@@ -16,9 +11,7 @@ x <- c('tidyverse','openxlsx','geosphere','magrittr','plm',
 #pacman::p_load(char=x,character.only=T)
 lapply(x, library, character.only = TRUE)
 
-
-
-dir<-'/code/Functions/'
+dir<-'/Functions/'
 funs<-list.files(paste0(getwd(),dir))
 lapply(paste0(getwd(),dir,funs),source)
 

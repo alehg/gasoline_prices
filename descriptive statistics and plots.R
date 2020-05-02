@@ -7,7 +7,7 @@ x <- c('tidyverse','openxlsx','geosphere',
        'corrplot','stats')
 lapply(x, library, character.only = TRUE)
 
-dir <- '/code/Functions/'
+dir <- '/Functions/'
 funs <- list.files(paste0(getwd(),dir))
 lapply(str_c(getwd(),dir,funs),source)
 
