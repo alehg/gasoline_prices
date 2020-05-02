@@ -4,9 +4,6 @@
 
 rm(list=ls())
 
-# setwd("C:/Users/kaso02/Desktop/Alex/Tesis/Code & Data")
-setwd("C:/Users/alehe/Dropbox/ITAM/Tesis/Code & Data")
-
 x <- c('tidyverse','openxlsx','magrittr','lubridate',
        'geosphere')
 lapply(x, library, character.only = TRUE)
