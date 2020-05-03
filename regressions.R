@@ -68,7 +68,7 @@ ecuacion2 <- disp ~ price_term + density + Brand + Convenience.Store +
 dispersion_reg <- function(producto,df){
   df <- df %>% filter(product == producto)
   # random vs pooled ols
-  fixed <- plm(ecuacion2,df, index = c('code','date'), model = 'within', effect='time')
+  fixed <- plm(ecuacion2,df, index = c('code','date'), model = 'within')
   random  <- plm(ecuacion2,df,index = c('code','date'),model = 'random')
   pool <- plm(ecuacion2,df,index = c('code','date'),model='pooling') 
   
@@ -81,21 +81,15 @@ dispersion_reg <- function(producto,df){
   hausman_test <- phtest(fixed,random) #null rejected, random model is consistent
   
   periodsreg <- function(periodo){
-    reg <- plm(ecuacion2,
-               filter(df,period == periodo), 
-               index = c('code','date'), 
-               model = 'random',
-               effect = 'time')
+    reg <- plm(ecuacion2,filter(df,period == periodo), index = c('code','date'), model = 'random')
   }
   periodos <- map(1:3,periodsreg)
-  return(list(fixed,random,pool,effects_test,hausman_test))
+  return(list(fixed,random,pool,effects_test,hausman_test,periodos))
 }
-
+ptm <- proc.time()
 reg_disp <- map(gasr,dispersion_reg,prices0) 
 names(reg_disp) <- gasr
-
-pluck(reg_disp,'premium',1) %>% summary()
-
+proc.time() - ptm
 
 anova <- list(anova(pluck(reg_disp,1,1)),anova(pluck(reg_disp,2,1))) #anova
 
