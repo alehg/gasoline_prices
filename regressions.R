@@ -36,24 +36,27 @@ ecuacion <- price_end ~ price_term + density +
 pricereg <- function(producto,df){
   df <- df %>% filter(product == producto)
   # random vs pooled ols
-  between <- plm(price_end ~ price_term + density,df, index = c('code','date'), model = 'between')
+  #between <- plm(price_end ~ price_term + density,df, index = c('code','date'), model = 'between')
   fixed <- plm(price_end ~ price_term + density,df, index = c('code','date'), model = 'within')
   random  <- plm(ecuacion,df,index = c('code','date'),model = 'random')
-  pool <- plm(ecuacion,df,index = c('code','date'),model='pooling')
+  #pool <- plm(ecuacion,df,index = c('code','date'),model='pooling')
   
   #null: zero variance of individual effect is zero
   # if rejected, heterogeneity among individuals is significant
-  effects_test <- plmtest(pool, type = 'bp') 
+  #effects_test <- plmtest(pool, type = 'bp') 
   
   # Hausman endogeneity test
   # null: individual random effects are exogenous
   hausman_test <- phtest(fixed,random) #null rejected, random model is consistent
   
+  # Serial Correlation test (Breusch-Godfrey)
+  bg_test <- pbgtest(random)
+  
   periodsreg <- function(periodo){
     reg <- plm(ecuacion,filter(df,period == periodo), index = c('code','date'), model = 'random')
   }
   periodos <- map(1:3,periodsreg)
-  return(list(between,fixed,random,pool,effects_test,hausman_test,periodos))
+  return(list(fixed,random,hausman_test,bg_test,periodos))
 }
 gasr <- unique(prices0$product)
 ptm <- proc.time()
@@ -110,4 +113,4 @@ summary(pluck(reg_disp,'premium',1), vcov = vcovBK(pluck(reg_disp,'premium',1),c
 # reg_local <- map(gasr,localreg)
 
 
-save(gasr,reg_precios,reg_disp,anova, file = 'regression_results.RData')
+save(gasr,reg_precios,reg_disp, file = 'data/regression_results.RData')
