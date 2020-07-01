@@ -19,13 +19,14 @@ theme_tesis <- theme_minimal() +
   theme(text = element_text(family = 'Arial Unicode MS'),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
-        axis.title.y =  element_text(size = 12),
+        axis.title.y =  element_text(size = 15),
         axis.title.x = element_blank(),
-        plot.title = element_text(size = 13,hjust = 0),
+        plot.title = element_text(size = 17,hjust = 0),
         plot.subtitle = element_text(hjust = 0),
-        axis.text =element_text(size=10),
+        axis.text =element_text(size=13),
         legend.position = 'top',
-        legend.text = element_text(size = 10))
+        legend.text = element_text(size = 14),
+        legend.title = element_text(size = 14))
 
 theme_set(theme_tesis)
 
@@ -33,6 +34,10 @@ azules <- c("#023876","#045DC3","#318DF6") #azules de oscuro a claro
 naranja <- c("#C56403")
 verdes <-c('#044A26','#006D34')
 gris <- c('#858585')
+
+
+# multiplot(pluck(quant_plots, 'premium') + ggtitle('(A)'), pluck(sd_plots, 'premium') + ggtitle('(B)'))
+# aspect ratio 1102, 1235 pixels
 
 aux_reg <- function(producto,price_df){
   df <- price_df %>% filter(product == producto)
@@ -229,6 +234,10 @@ tabla_precios <- final_prices %>%
   summarise(avg_price = mean(value),
             sd_price = sd(value)) %>% 
   ungroup()
+
+pivot_wider(tabla_precios %>% pivot_longer(cols = contains('price')), 
+            id_cols = c('tipo','product'), names_from = c(year, name), 
+            values_from = value) -> tabla_precios2
 
 save(sd_plots,quant_plots,term_plots,tabla,road_type,brand,
      density_hist,density_plots,price_plots,
