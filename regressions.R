@@ -64,6 +64,19 @@ reg_precios <- map(gasr,pricereg,prices0)
 proc.time() - ptm
 names(reg_precios) <- gasr
 
+
+
+ecuacion_prueba <- price_end ~ price_term + log(density) + 
+  Brand + Convenience.Store + min_dist +
+  Road.Type +  same_brand_share 
+
+prueba_reg  <- plm(ecuacion_prueba,
+                   data = prices1 %>% filter(product == 'premium'),
+                   index = c('code','date'),
+                   model = 'random')
+summary(prueba_reg)
+summary(prueba_reg, vcov = vcovBK(prueba_reg, cluster = 'group', type = 'HC0'))
+
 # ------------------- Dispersion Regression -------------------------
 ecuacion2 <- disp ~   log(density + .1) + Brand + Convenience.Store + 
   same_brand_share + Road.Type   
