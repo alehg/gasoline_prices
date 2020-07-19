@@ -24,8 +24,10 @@ itera_denue <- function(latitud, longitud){
 
 denue_est <- map2(gasocl$latitude, gasocl$longitude, itera_denue) 
 denue_num <- map(denue_est,nrow)
+denue_zip <- map(denue_est, function(x) getmode(pull(x, 'postal_code')))
 
-denue_col <- data.frame(num_est = matrix(unlist(denue_num), nrow=length(denue_num), byrow=T))
+denue_col <- tibble(num_est = matrix(unlist(denue_num)), 
+                    zip_code = matrix(unlist(denue_zip)))
 gasocl1 <- gasocl %>% bind_cols(denue_col)
-prices1 <- prices0 %>% left_join(gasocl1 %>% select(code, num_est), by = 'code')
+prices1 <- prices0 %>% left_join(gasocl1 %>% select(code, num_est, zip_code), by = 'code')
 save(denue_est, gasocl1, prices1, file='data/denue.RData')
