@@ -225,7 +225,7 @@ names(dispersion_plots) <- unique(final_prices$product)
 
 # Tabla precios
 # 2017
-tabla_precios <- final_prices %>% 
+tabla_precios <- prices1 %>% 
   select(date,year,product,price_end,price_term) %>% 
   pivot_longer(cols = c('price_end','price_term'),
                names_to = c('tipo'),
