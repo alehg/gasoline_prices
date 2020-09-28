@@ -69,6 +69,9 @@ summary(prueba_reg, vcov = plm::vcov(prueba_reg,  cluster = 'group'))
 ecuacion3 <- uhat2 ~ log(density + 1) + Brand + Convenience.Store + 
   same_brand_share + Road.Type + ATM + Car.Wash + zip_code +
   muni_name + min_dist
+ecuacion4 <- disp ~ price_term + log(density + 1) + Brand + Convenience.Store + 
+  same_brand_share + Road.Type + ATM + Car.Wash + zip_code +
+  muni_name + min_dist
 
 productos <- c('regular', 'premium', 'diesel')
 prepare_datasets <- function(producto){
@@ -85,9 +88,21 @@ prepare_datasets <- function(producto){
   dataset_years <- map(2017:2019, prepare_years, df)
   return(dataset_years)
 }
-datasets <- map(productos, prepare_datasets)
+prepare_datasets2 <- function(producto){
+  df <- prices1 %>% filter(product == producto)
+  prepare_years <- function(anio, df){
+    df <- df %>% 
+      filter(year == anio) %>%
+      mutate(date2 = as.integer(date)) %>% 
+      arrange(code, date)
+    return(df)
+  }
+  dataset_years <- map(2017:2019, prepare_years, df)
+  return(dataset_years)
+}
+datasets <- map(productos, prepare_datasets2)
 apply_pcse <- function(dataf){
-  panelAR(formula = ecuacion3,
+  panelAR(formula = ecuacion4,
           data = as.data.frame(dataf), 
           panelVar = 'code', 
           timeVar = 'date2',
