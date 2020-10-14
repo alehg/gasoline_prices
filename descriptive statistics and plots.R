@@ -36,7 +36,7 @@ verdes <-c('#044A26','#006D34')
 gris <- c('#858585')
 
 
-# multiplot(pluck(quant_plots, 'premium') + ggtitle('(A)'), pluck(sd_plots, 'premium') + ggtitle('(B)'))
+multiplot(pluck(quant_plots, 'diesel') + ggtitle('(A)'), pluck(sd_plots, 'diesel') + ggtitle('(B)'))
 # aspect ratio 1102, 1235 pixels
 
 aux_reg <- function(producto,price_df){
