@@ -18,6 +18,9 @@ lapply(paste0(getwd(),dir,funs),source)
 load('data/denue.RData')
 prices1 <- prices1 %>% 
   mutate(Road.Type = if_else(Road.Type == 'drive', 'avenue', Road.Type))
+ageb_data <- readRDS('data/ageb_final.RDS') %>% 
+  select(code, pobtot, graproes, pea, vph_autom)
+prices1 <- left_join(prices1, ageb_data, by='code')
 #------- Level of Dispersion ----------
 prices1 %>% 
   group_by(product, year) %>% 
@@ -31,9 +34,9 @@ ecuacion <- price_end ~ price_term + log(density + 1) +
   Road.Type +  same_brand_share + min_dist
 
 
-pricereg <- function(producto,df){
+pricereg <- function(producto,df, equation){
   df <- df %>% filter(product == producto)
-  random  <- plm(ecuacion,
+  random  <- plm(equation,
                  df,
                  index = c('code','date'),
                  model = 'random')
@@ -41,7 +44,7 @@ pricereg <- function(producto,df){
   bg_test <- pbgtest(random)
   
   periodsreg <- function(periodo){
-    reg <- plm(ecuacion,filter(df,period == periodo), index = c('code','date'), model = 'random')
+    reg <- plm(equation,filter(df,period == periodo), index = c('code','date'), model = 'random')
   }
   periodos <- map(1:3,periodsreg)
   return(list(random,bg_test,periodos))
@@ -50,7 +53,7 @@ gasr <- unique(prices1$product)
 ptm <- proc.time()
 reg_precios <- map(gasr,pricereg,prices1)
 proc.time() - ptm
-names(reg_precios) <- gasr
+
 
 pluck(reg_precios,'regular',1) %>% summary(vcov = plm::vcovSCC(.))
 
@@ -62,7 +65,25 @@ summary(prueba_reg)
 summary(prueba_reg, vcov = plm::vcov(prueba_reg,  cluster = 'group'))
 
 
+# -------- Suggestions ------
+# 1. log(price)
+# 2. remove min_dist variable
+# 3. Use fixed effects
 
+# Regression using log price
+ecuacion_aux <- log(price_end) ~ log(price_term) + log(density + 1) + 
+  Brand + Convenience.Store + ATM + Car.Wash  +
+  Road.Type +  same_brand_share + log(graproes+1) + log(vph_autom+1) 
+gasr <- unique(prices1$product)
+
+ptm <- proc.time()
+aux_reg_precios <- map(gasr,pricereg,prices1, ecuacion_aux)
+proc.time() - ptm
+names(aux_reg_precios) <- gasr
+
+pluck(aux_reg_precios, 'regular', 3, 1) %>% summary(vcov = plm::vcovSCC(.))
+
+# Before adding AGEB vars check their correlation with each other and with seller density
 
 #-----------Lewis Method-------------------
 # Prais-Winsten estimator
