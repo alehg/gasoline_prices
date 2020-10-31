@@ -4,7 +4,7 @@ rm(list=ls())
 x <- c('tidyverse','openxlsx','geosphere',
        'magrittr','scales','readxl','extrafont',
        'fastDummies','treemapify','lubridate',
-       'corrplot','stats')
+       'corrplot','stats', 'ggmap')
 lapply(x, library, character.only = TRUE)
 
 dir <- '/Functions/'
@@ -16,14 +16,14 @@ load('data/clean_prices.RData')
 Sys.setlocale(locale = 'English')
  # font_install('font_cm')
 theme_tesis <- theme_minimal() +
-  theme(text = element_text(family = 'Arial Unicode MS'),
+  theme(text = element_text(family = 'Helvetica'),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
-        axis.title.y =  element_text(size = 15),
+        axis.title.y =  element_text(size = 13),
         axis.title.x = element_blank(),
         plot.title = element_text(size = 17,hjust = 0),
         plot.subtitle = element_text(hjust = 0),
-        axis.text =element_text(size=13),
+        axis.text =element_text(size=12),
         legend.position = 'top',
         legend.text = element_text(size = 14),
         legend.title = element_text(size = 14))
@@ -51,6 +51,7 @@ final_prices <- map_dfr(1:3,function(i,lista) pluck(lista,i,1),auxreg_list)
 save(final_prices,file='data/final_prices.RData')
 save(auxreg_list,file='data/auxreg_results.RData')
 
+load('data/final_prices.RData')
 #Standard Deviation Plots 
 sd_plots <- map(unique(final_prices$product),sdplot,final_prices)
 names(sd_plots) <- unique(final_prices$product)
@@ -150,6 +151,13 @@ graficas_densidad <- function(prices_df){
   return(list(muni = muni, road_type = road_type, convenience = conv,brand = brand))
 }
 density_plots <- graficas_densidad(final_prices)
+
+final_prices %>% 
+  mutate(Road.Type = if_else(Road.Type == "drive", "avenue", Road.Type)) %>% 
+  ggplot(aes(x = Road.Type,y = density,fill = Road.Type)) + 
+  geom_boxplot(show.legend = F, fill = 'blue', alpha = 0.4) + 
+  theme(axis.title.x = element_text(size = 15)) + xlab('Type of Road') + 
+  ylab('Seller Density')
 
 graficas_precios <- function(producto,price_df){
   # Boxplot: Price vs. Density 
