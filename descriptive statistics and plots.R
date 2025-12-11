@@ -1,86 +1,177 @@
+# Descriptive Statistics and Visualization Script
+# This script generates exploratory data analysis plots and descriptive statistics
+# for the gasoline price analysis
+
 rm(list=ls())
-# Here I will make some quantile and standard deviation plots 
 
-x <- c('tidyverse','openxlsx','geosphere',
-       'magrittr','scales','readxl','extrafont',
-       'fastDummies','treemapify','lubridate',
-       'corrplot','stats')
-lapply(x, library, character.only = TRUE)
+# ============================================================================
+# LOAD REQUIRED PACKAGES
+# ============================================================================
+required_packages <- c('tidyverse','openxlsx','geosphere',
+                       'magrittr','scales','readxl','extrafont',
+                       'fastDummies','treemapify','lubridate',
+                       'corrplot','stats')
+missing_packages <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
+if(length(missing_packages) > 0) {
+  stop(paste("Missing required packages:", paste(missing_packages, collapse=", ")))
+}
+lapply(required_packages, library, character.only = TRUE)
 
-dir <- '/Functions/'
-funs <- list.files(paste0(getwd(),dir))
-lapply(str_c(getwd(),dir,funs),source)
+# ============================================================================
+# LOAD CUSTOM FUNCTIONS
+# ============================================================================
+functions_dir <- file.path(getwd(), 'Functions')
+if(!dir.exists(functions_dir)) {
+  stop(paste("Functions directory not found at:", functions_dir))
+}
+function_files <- list.files(functions_dir, pattern = "\\.R$", full.names = TRUE)
+lapply(function_files, source)
 
-load('data/clean_prices.RData')
+# ============================================================================
+# LOAD DATA
+# ============================================================================
+data_dir <- file.path(getwd(), 'data')
+clean_prices_file <- file.path(data_dir, 'clean_prices.RData')
+if(!file.exists(clean_prices_file)) {
+  stop(paste("Clean prices file not found at:", clean_prices_file))
+}
+load(clean_prices_file)
 
+# ============================================================================
+# SET UP PLOTTING THEME AND COLORS
+# ============================================================================
+# Set locale for proper date formatting
 Sys.setlocale(locale = 'English')
- # font_install('font_cm')
+
+# Define custom theme for thesis/publication-quality plots
+# Note: font_install('font_cm') may be needed if Arial Unicode MS is not available
 theme_tesis <- theme_minimal() +
   theme(text = element_text(family = 'Arial Unicode MS'),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
-        axis.title.y =  element_text(size = 15),
+        axis.title.y = element_text(size = 15),
         axis.title.x = element_blank(),
-        plot.title = element_text(size = 17,hjust = 0),
+        plot.title = element_text(size = 17, hjust = 0),
         plot.subtitle = element_text(hjust = 0),
-        axis.text =element_text(size=13),
+        axis.text = element_text(size = 13),
         legend.position = 'top',
         legend.text = element_text(size = 14),
         legend.title = element_text(size = 14))
 
 theme_set(theme_tesis)
 
-azules <- c("#023876","#045DC3","#318DF6") #azules de oscuro a claro
-naranja <- c("#C56403")
-verdes <-c('#044A26','#006D34')
-gris <- c('#858585')
+# Color palette for plots
+azules <- c("#023876", "#045DC3", "#318DF6")  # Blues from dark to light
+naranja <- c("#C56403")  # Orange
+verdes <- c('#044A26', '#006D34')  # Greens
+gris <- c('#858585')  # Gray
 
+# Note: Example multiplot call (commented out as plots don't exist yet)
+# multiplot(pluck(quant_plots, 'diesel') + ggtitle('(A)'), 
+#           pluck(sd_plots, 'diesel') + ggtitle('(B)'))
+# Recommended aspect ratio: 1102 x 1235 pixels
 
-multiplot(pluck(quant_plots, 'diesel') + ggtitle('(A)'), pluck(sd_plots, 'diesel') + ggtitle('(B)'))
-# aspect ratio 1102, 1235 pixels
+# ============================================================================
+# AUXILIARY REGRESSION FOR PRICE DISPERSION
+# ============================================================================
+# Run fixed effects regression (station and date fixed effects) to extract
+# residuals. These residuals represent price deviations from station and
+# time averages, which are then used to measure price dispersion.
+#
+# The dispersion measure is log(uhat^2), where uhat are the residuals from
+# the fixed effects regression.
 
-aux_reg <- function(producto,price_df){
+aux_reg <- function(producto, price_df){
+  # Runs auxiliary fixed effects regression for a product.
+  #
+  # Args:
+  #   producto: Product type (regular, premium, diesel)
+  #   price_df: Price dataframe
+  #
+  # Returns:
+  #   List containing:
+  #     - Dataframe with residuals (uhat) and dispersion measure (disp)
+  #     - Regression model object
+  
   df <- price_df %>% filter(product == producto)
-  modelito <- lm(price_end ~ factor(code) + factor(date),data = df)
+  
+  # Fixed effects regression: price ~ station FE + date FE
+  # This removes station-specific and time-specific effects
+  modelito <- lm(price_end ~ factor(code) + factor(date), data = df)
+  
+  # Extract residuals (deviations from station and time averages)
   u_hat <- resid(modelito)
-  df <- df %>% mutate(uhat = u_hat,disp = log(uhat^2))
-  return(list(df,modelito))
+  
+  # Create dispersion measure: log of squared residuals
+  # This measures the variance of price deviations
+  df <- df %>% 
+    mutate(uhat = u_hat, disp = log(uhat^2))
+  
+  return(list(df, modelito))
 }
-auxreg_list <- map(unique(clean_prices$product),aux_reg,clean_prices)
-final_prices <- map_dfr(1:3,function(i,lista) pluck(lista,i,1),auxreg_list)
-save(final_prices,file='data/final_prices.RData')
-save(auxreg_list,file='data/auxreg_results.RData')
 
-#Standard Deviation Plots 
-sd_plots <- map(unique(final_prices$product),sdplot,final_prices)
+# Run auxiliary regression for each product
+auxreg_list <- map(unique(clean_prices$product), aux_reg, clean_prices)
+
+# Combine results from all products into single dataframe
+final_prices <- map_dfr(1:length(auxreg_list), 
+                       function(i, lista) pluck(lista, i, 1), 
+                       auxreg_list)
+
+# Save final prices with dispersion measures
+final_prices_file <- file.path(data_dir, 'final_prices.RData')
+save(final_prices, file = final_prices_file)
+cat("Final prices with dispersion measures saved to:", final_prices_file, "\n")
+
+# Save auxiliary regression results
+auxreg_file <- file.path(data_dir, 'auxreg_results.RData')
+save(auxreg_list, file = auxreg_file)
+
+# ============================================================================
+# GENERATE PLOTS
+# ============================================================================
+
+# Standard Deviation Plots: Show evolution of price dispersion over time
+sd_plots <- map(unique(final_prices$product), sdplot, final_prices)
 names(sd_plots) <- unique(final_prices$product)
 
-# Quantile Plots
-quant_plots <- map(unique(final_prices$product),quantplot,final_prices)
+# Quantile Plots: Show distribution of prices across stations over time
+quant_plots <- map(unique(final_prices$product), quantplot, final_prices)
 names(quant_plots) <- unique(final_prices$product)
 
-# dividir en anios, hacer graficas para precios de terminal, determinar si la volatilidad y
-# la caida en precios en 2019 se debe a politicas fiscales 
-
-# Terminal Prices
-term_plots <- map(unique(final_prices$product),terminalplot,final_prices)
+# Terminal (Wholesale) Price Plots: Show wholesale price evolution
+# Note: Analysis could be extended to determine if volatility and price
+# decline in 2019 is due to fiscal policies
+term_plots <- map(unique(final_prices$product), terminalplot, final_prices)
 names(term_plots) <- unique(final_prices$product)
 
-# Why do terminal prices differ that much between products?
+# Research question: Why do terminal prices differ so much between products?
 
-Sys.setlocale(locale="")
+# Reset locale
+Sys.setlocale(locale = "")
 
 
-######## Descriptive statistics #######
-# Stations 
-tabla <- lst(avg = mean,sd = sd,min = min,max = max) %>% 
+# ============================================================================
+# DESCRIPTIVE STATISTICS
+# ============================================================================
+
+# Create summary statistics table for station characteristics
+# Computes mean, sd, min, max for density, brand shares, amenities, etc.
+tabla <- lst(avg = mean, sd = sd, min = min, max = max) %>% 
   map(~ final_prices %>% 
-  dummy_cols(select_columns = c('Road.Type','Brand')) %>% 
-  summarise_at(vars(density,same_brand,same_brand_share,min_dist,
-                    Convenience.Store,ATM,contains('Road.Type_'),contains('Brand_')),.x,na.rm = T) %>% 
-  ungroup() %>% gather('var','value')) %>% 
-  reduce(inner_join,by = 'var') %>% 
-  rename(mean = value.x,sd = value.y,min = value.x.x, max = value.y.y)
+    # Create dummy variables for Road.Type and Brand for summary statistics
+    dummy_cols(select_columns = c('Road.Type', 'Brand')) %>% 
+    # Compute statistics for key variables
+    summarise_at(vars(density, same_brand, same_brand_share, min_dist,
+                      Convenience.Store, ATM, 
+                      contains('Road.Type_'), contains('Brand_')), 
+                 .x, na.rm = TRUE) %>% 
+    ungroup() %>% 
+    # Reshape to long format for joining
+    gather('var', 'value')) %>% 
+  # Join all statistics into single table
+  reduce(inner_join, by = 'var') %>% 
+  rename(mean = value.x, sd = value.y, min = value.x.x, max = value.y.y)
   
 # How many stations per municipalities?
 # mode function
@@ -223,25 +314,42 @@ grafica_dispersion <- function(producto,price_df){
 dispersion_plots <- map(unique(final_prices$product),grafica_dispersion,final_prices)
 names(dispersion_plots) <- unique(final_prices$product)
 
-# Tabla precios
-# 2017
-tabla_precios <- prices1 %>% 
-  select(date,year,product,price_end,price_term) %>% 
-  pivot_longer(cols = c('price_end','price_term'),
-               names_to = c('tipo'),
+# ============================================================================
+# PRICE SUMMARY TABLE
+# ============================================================================
+# Create summary table of average and standard deviation of prices by year and product
+# Note: This uses clean_prices (not prices1) since prices1 may not be loaded
+# If prices1 is needed, it should be loaded from denue.RData first
+
+tabla_precios <- clean_prices %>% 
+  select(date, year, product, price_end, price_term) %>% 
+  # Reshape to long format: price_end and price_term become 'tipo' variable
+  pivot_longer(cols = c('price_end', 'price_term'),
+               names_to = 'tipo',
                values_to = 'value') %>% 
-  group_by(year,product,tipo) %>% 
-  summarise(avg_price = mean(value),
-            sd_price = sd(value)) %>% 
-  ungroup()
+  # Compute summary statistics by year, product, and price type
+  group_by(year, product, tipo) %>% 
+  summarise(avg_price = mean(value, na.rm = TRUE),
+            sd_price = sd(value, na.rm = TRUE),
+            .groups = 'drop')
 
-pivot_wider(tabla_precios %>% pivot_longer(cols = contains('price')), 
-            id_cols = c('tipo','product'), names_from = c(year, name), 
-            values_from = value) -> tabla_precios2
+# Reshape to wide format for presentation
+# Note: The nested pivot operations create a complex structure
+tabla_precios2 <- tabla_precios %>% 
+  pivot_longer(cols = contains('price'), names_to = 'stat_name', values_to = 'value') %>% 
+  pivot_wider(id_cols = c('tipo', 'product'), 
+              names_from = c(year, stat_name), 
+              values_from = value)
 
-save(sd_plots,quant_plots,term_plots,tabla,road_type,brand,
-     density_hist,density_plots,price_plots,
-     correlation_plots,dispersion_plots, tabla_precios,file='data/plots.RData')
+# ============================================================================
+# SAVE ALL PLOTS AND TABLES
+# ============================================================================
+plots_file <- file.path(data_dir, 'plots.RData')
+save(sd_plots, quant_plots, term_plots, tabla, road_type, brand,
+     density_hist, density_plots, price_plots,
+     correlation_plots, dispersion_plots, tabla_precios,
+     file = plots_file)
+cat("All plots and tables saved to:", plots_file, "\n")
 
 
 
